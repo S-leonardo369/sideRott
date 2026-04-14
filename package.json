@@ -1,0 +1,52 @@
+{
+  "name": "brainrot",
+  "version": "1.0.0",
+  "description": "Focus companion — controlled background stimulation for deep work",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "generate-placeholders": "node scripts/generate-placeholders.js",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win"
+  },
+  "author": "BrainRot",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.brainrot.app",
+    "productName": "BrainRot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/clips",
+        "to": "clips"
+      },
+      {
+        "from": "assets/thumbnails",
+        "to": "thumbnails"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icons/app-icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
+  }
+}

@@ -1,0 +1,428 @@
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* ── Video Container ── */
+#video-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #000;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+#video-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 2;
+}
+
+#video-stream {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+#video-stream.active {
+  opacity: 1;
+}
+
+#video-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+#video-container.use-fallback #video-player {
+  display: none;
+}
+
+#video-container.use-fallback #video-fallback {
+  display: block;
+}
+
+/* ── Vignette Gradients ── */
+.vignette {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+#vignette-top {
+  top: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%);
+}
+
+#vignette-bottom {
+  bottom: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%);
+}
+
+body.controls-visible .vignette {
+  opacity: 1;
+}
+
+/* ── Control Buttons (shared) ── */
+.control-btn {
+  position: fixed;
+  z-index: 100;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    background 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+  -webkit-app-region: no-drag;
+}
+
+body.controls-visible .control-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Close Button ── */
+#close-btn {
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#close-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.08);
+}
+
+#close-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Menu Button ── */
+#menu-btn {
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: 44px;
+  padding: 10px 16px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+body.controls-visible #menu-btn {
+  transform: translateX(-50%) scale(1);
+}
+
+#menu-btn:hover {
+  background: rgba(255,255,255,0.3);
+  box-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+
+#menu-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.menu-icon {
+  position: absolute;
+  transition: opacity 300ms ease, transform 300ms ease;
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.8);
+}
+
+.menu-icon.active {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* ── Video Selection Menu ── */
+#menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+
+#menu-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#menu-container {
+  width: 85%;
+  max-height: 70%;
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  /* Liquid Glass Effect */
+  backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.14) 100%
+  );
+  border-top: 1px solid rgba(255,255,255,0.5);
+  border-left: 1px solid rgba(255,255,255,0.15);
+  border-right: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(255,255,255,0.05);
+
+  /* Animation */
+  transform: scale(0.9) translateY(20px);
+  transition:
+    transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#menu-overlay.open #menu-container {
+  transform: scale(1) translateY(0);
+}
+
+/* ── Menu Header ── */
+#menu-header {
+  padding: 20px 20px 8px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── Menu Grid ── */
+#menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px 20px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+#menu-grid::-webkit-scrollbar {
+  width: 4px;
+}
+
+#menu-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#menu-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+}
+
+/* ── Thumbnail Card ── */
+.thumbnail-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.2);
+  transform: perspective(800px) rotateX(2deg);
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out,
+    border-color 200ms ease;
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.3),
+    0 1px 3px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.thumbnail-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    145deg,
+    rgba(255,255,255,0.25) 0%,
+    rgba(255,255,255,0.05) 60%,
+    rgba(255,255,255,0.15) 100%
+  );
+  pointer-events: none;
+  transition: background 200ms ease;
+}
+
+.thumbnail-card:hover {
+  transform: perspective(800px) rotateX(2deg) scale(1.05) translateY(-2px);
+  border-color: rgba(255,255,255,0.4);
+  box-shadow:
+    0 8px 30px rgba(0,0,0,0.4),
+    0 2px 6px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.5);
+}
+
+.thumbnail-card:hover::before {
+  background: linear-gradient(
+    145deg,
+    rgba(255,255,255,0.35) 0%,
+    rgba(255,255,255,0.1) 60%,
+    rgba(255,255,255,0.2) 100%
+  );
+}
+
+.thumbnail-card:active {
+  transform: perspective(800px) rotateX(2deg) scale(0.97);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.3),
+    0 1px 2px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Selected / Now Playing */
+.thumbnail-card.selected {
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.3),
+    0 1px 3px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.1),
+    0 0 0 3px rgba(255,255,255,0.6);
+  animation: selectedPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes selectedPulse {
+  from {
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.3),
+      0 1px 3px rgba(0,0,0,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(0,0,0,0.1),
+      0 0 0 3px rgba(255,255,255,0.4);
+  }
+  to {
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.3),
+      0 1px 3px rgba(0,0,0,0.2),
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(0,0,0,0.1),
+      0 0 0 3px rgba(255,255,255,0.7);
+  }
+}
+
+/* Thumbnail Image */
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Fallback gradient (when no image) */
+.thumbnail-gradient {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Thumbnail Title */
+.thumbnail-title {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+}
+
+/* Now Playing Label */
+.now-playing-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 3px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: white;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  white-space: nowrap;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Scrollbar for menu ── */
+#menu-grid {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}

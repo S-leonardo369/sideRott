@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+brainrot.config.json
+*.log
+temp_downloads/
+temp_*.mp4
+.claude/

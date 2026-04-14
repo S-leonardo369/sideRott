@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrainRot Overlay</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Video Layer -->
+  <div id="video-container">
+    <video id="video-player" muted loop playsinline></video>
+    <video id="video-stream" muted playsinline></video>
+    <canvas id="video-fallback"></canvas>
+  </div>
+
+  <!-- Hover Gradient Vignettes -->
+  <div id="vignette-top" class="vignette"></div>
+  <div id="vignette-bottom" class="vignette"></div>
+
+  <!-- Controls (invisible until hover) -->
+  <button id="close-btn" class="control-btn" aria-label="Close overlay">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <line x1="5" y1="5" x2="15" y2="15"/>
+      <line x1="15" y1="5" x2="5" y2="15"/>
+    </svg>
+  </button>
+
+  <button id="menu-btn" class="control-btn" aria-label="Open video menu">
+    <svg id="menu-icon-grid" class="menu-icon active" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="3" y="3" width="8" height="8" rx="2"/>
+      <rect x="13" y="3" width="8" height="8" rx="2"/>
+      <rect x="3" y="13" width="8" height="8" rx="2"/>
+      <rect x="13" y="13" width="8" height="8" rx="2"/>
+    </svg>
+    <svg id="menu-icon-close" class="menu-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Video Selection Menu -->
+  <div id="menu-overlay">
+    <div id="menu-container">
+      <div id="menu-header">PICK YOUR VIBE</div>
+      <div id="menu-grid"></div>
+    </div>
+  </div>
+
+  <script src="components/video-player.js"></script>
+  <script src="components/controls.js"></script>
+  <script src="components/menu.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
