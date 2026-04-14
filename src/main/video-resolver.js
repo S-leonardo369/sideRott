@@ -6,11 +6,54 @@
  * (YouTube CDN URLs typically expire after ~6 hours).
  */
 
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 const path = require('path');
-const { app } = require('electron');
+const fs = require('fs');
 
-const YTDLP_PATH = path.normalize('C:/Users/Bazuka/AppData/Roaming/Python/Python314/Scripts/yt-dlp.exe');
+// ── Find yt-dlp on this machine ──
+
+const CANDIDATE_PATHS = [
+  // Pip installs (user)
+  path.join(process.env.APPDATA || '', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+  path.join(process.env.APPDATA || '', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+  path.join(process.env.APPDATA || '', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+  path.join(process.env.APPDATA || '', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+  // Pip installs (system)
+  path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+  path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+  path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+  // Standalone binary
+  'C:\\yt-dlp\\yt-dlp.exe',
+  // Chocolatey
+  path.join(process.env.ProgramData || 'C:\\ProgramData', 'chocolatey', 'bin', 'yt-dlp.exe'),
+  // Scoop
+  path.join(process.env.USERPROFILE || '', 'scoop', 'shims', 'yt-dlp.exe'),
+  // Winget / general PATH
+  'yt-dlp.exe',
+];
+
+let _resolvedPath = null;
+
+function findYtDlp() {
+  if (_resolvedPath) return _resolvedPath;
+
+  for (const candidate of CANDIDATE_PATHS) {
+    try {
+      if (fs.existsSync(candidate)) {
+        // Verify it's actually executable
+        execFileSync(candidate, ['--version'], { timeout: 5000, stdio: 'pipe' });
+        _resolvedPath = candidate;
+        console.log(`[VideoResolver] Found yt-dlp at: ${candidate}`);
+        return candidate;
+      }
+    } catch {
+      // Not a valid yt-dlp here, try next
+    }
+  }
+
+  console.error('[VideoResolver] yt-dlp not found! Searched:', CANDIDATE_PATHS.filter(p => p).join(', '));
+  return null;
+}
 
 // Cache: { url: { directUrl, resolvedAt } }
 const urlCache = new Map();
@@ -28,11 +71,14 @@ function resolveStreamUrl(sourceUrl) {
     return Promise.resolve({ url: cached.directUrl, format: cached.format, cached: true });
   }
 
+  const ytdlpPath = findYtDlp();
+  if (!ytdlpPath) {
+    return Promise.reject(new Error(
+      'yt-dlp not found. Install it: pip install yt-dlp  (or download from https://github.com/yt-dlp/yt-dlp/releases)'
+    ));
+  }
+
   return new Promise((resolve, reject) => {
-    // Use yt-dlp to get the direct URL
-    // -f: prefer 1080p60 mp4, fallback to 1080p, then 720p
-    // -g: print direct URL only
-    // --no-playlist: single video
     const args = [
       '-f', '299/137/298/136/best[height>=720]',
       '-g',               // print URL to stdout
@@ -41,12 +87,17 @@ function resolveStreamUrl(sourceUrl) {
       sourceUrl
     ];
 
-    execFile(YTDLP_PATH, args, {
+    execFile(ytdlpPath, args, {
       timeout: 15000,     // 15 second timeout
-      maxBuffer: 1024 * 64
+      maxBuffer: 1024 * 64,
+      windowsHide: true   // Don't flash a console window on Windows
     }, (error, stdout, stderr) => {
       if (error) {
         console.error(`[VideoResolver] Failed for ${sourceUrl}:`, error.message);
+        // If ENOENT, invalidate cached path so we search again
+        if (error.code === 'ENOENT') {
+          _resolvedPath = null;
+        }
         reject(new Error(`Stream resolution failed: ${error.message}`));
         return;
       }
@@ -57,7 +108,7 @@ function resolveStreamUrl(sourceUrl) {
         return;
       }
 
-      // Determine format from URL or use generic label
+      // Determine format from URL
       let format = '1080p';
       if (directUrl.includes('itag=299') || directUrl.includes('itag%3D299')) format = '1080p60';
       else if (directUrl.includes('itag=137') || directUrl.includes('itag%3D137')) format = '1080p';
