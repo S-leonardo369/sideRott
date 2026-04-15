@@ -218,6 +218,14 @@ class VideoPlayer {
    * Crossfade from the local clip to the live stream.
    */
   _handoffToStream() {
+    // Listen for stream ending — CDN URLs often can't use native loop,
+    // so we manually restart playback from the beginning.
+    this.streamEl.addEventListener('ended', () => {
+      console.log('[VideoPlayer] Stream ended, restarting loop');
+      this.streamEl.currentTime = 0;
+      this.streamEl.play().catch(() => {});
+    });
+
     // Start stream playback
     this.streamEl.play().then(() => {
       // Crossfade: show stream on top of clip
@@ -242,8 +250,11 @@ class VideoPlayer {
   _resetStream() {
     this.streamEl.classList.remove('active');
     this.streamEl.pause();
+    // Remove all event listeners by cloning (prevents stale 'ended' handlers)
+    const newStream = this.streamEl.cloneNode(false);
+    this.streamEl.parentNode.replaceChild(newStream, this.streamEl);
+    this.streamEl = newStream;
     this.streamEl.removeAttribute('src');
-    this.streamEl.load(); // reset internal state
     this.streamActive = false;
     this.streamLoading = false;
   }
