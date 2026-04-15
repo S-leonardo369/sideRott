@@ -199,30 +199,27 @@ body.controls-visible #menu-btn {
 }
 
 #menu-container {
-  width: 88%;
-  max-height: 70%;
-  border-radius: 24px;
+  width: 92%;
+  max-height: 80%;
+  border-radius: 28px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 
-  /* Liquid Glass Effect */
-  backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
+  /* Warm-tinted glass */
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
   background: linear-gradient(
     135deg,
-    rgba(255,255,255,0.18) 0%,
-    rgba(255,255,255,0.08) 50%,
-    rgba(255,255,255,0.14) 100%
+    rgba(255, 107, 107, 0.22) 0%,
+    rgba(255, 154, 86, 0.18) 50%,
+    rgba(255, 87, 140, 0.24) 100%
   );
-  border-top: 1px solid rgba(255,255,255,0.5);
-  border-left: 1px solid rgba(255,255,255,0.15);
-  border-right: 1px solid rgba(255,255,255,0.15);
-  border-bottom: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 8px 32px rgba(0,0,0,0.25),
-    inset 0 1px 0 rgba(255,255,255,0.3),
-    inset 0 -1px 0 rgba(255,255,255,0.05);
+    0 25px 50px -12px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    inset 0 -1px 0 rgba(255,255,255,0.1);
 
   /* Animation */
   transform: scale(0.9) translateY(20px);
@@ -237,21 +234,22 @@ body.controls-visible #menu-btn {
 
 /* ── Menu Header ── */
 #menu-header {
-  padding: 20px 20px 8px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.6);
-  letter-spacing: 1.5px;
+  padding: 24px 20px 6px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.3px;
   text-transform: uppercase;
   text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Menu Grid ── */
 #menu-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 14px 20px 20px 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 18px 20px 24px 20px;
   overflow-y: auto;
   flex: 1;
 }
@@ -273,90 +271,54 @@ body.controls-visible #menu-btn {
 .thumbnail-card {
   position: relative;
   aspect-ratio: 1 / 1;
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.2);
-  transform: perspective(800px) rotateX(1deg);
-  transition:
-    transform 200ms ease-out,
-    box-shadow 200ms ease-out,
-    border-color 200ms ease;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow:
-    0 4px 12px rgba(0,0,0,0.3),
-    0 1px 3px rgba(0,0,0,0.2),
+    0 10px 20px -4px rgba(0,0,0,0.3),
+    0 4px 8px -2px rgba(0,0,0,0.2),
     inset 0 1px 0 rgba(255,255,255,0.4),
-    inset 0 -1px 0 rgba(0,0,0,0.1);
-}
-
-.thumbnail-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.25) 0%,
-    rgba(255,255,255,0.05) 60%,
-    rgba(255,255,255,0.15) 100%
-  );
-  pointer-events: none;
-  transition: background 200ms ease;
+    inset 0 -2px 0 rgba(0,0,0,0.2);
 }
 
 .thumbnail-card:hover {
-  transform: perspective(800px) rotateX(1deg) scale(1.03) translateY(-1px);
-  border-color: rgba(255,255,255,0.4);
+  transform: scale(1.04) translateY(-2px);
   box-shadow:
-    0 6px 20px rgba(0,0,0,0.4),
-    0 2px 6px rgba(0,0,0,0.25),
+    0 20px 25px -5px rgba(0,0,0,0.4),
+    0 8px 10px -6px rgba(0,0,0,0.3),
     inset 0 1px 0 rgba(255,255,255,0.5);
 }
 
-.thumbnail-card:hover::before {
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.35) 0%,
-    rgba(255,255,255,0.1) 60%,
-    rgba(255,255,255,0.2) 100%
-  );
-}
-
 .thumbnail-card:active {
-  transform: perspective(800px) rotateX(1deg) scale(0.97);
+  transform: scale(0.97);
   box-shadow:
-    0 2px 8px rgba(0,0,0,0.3),
-    0 1px 2px rgba(0,0,0,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.3);
+    0 4px 8px rgba(0,0,0,0.3),
+    0 1px 3px rgba(0,0,0,0.2);
 }
 
 /* Selected / Now Playing */
 .thumbnail-card.selected {
   box-shadow:
-    0 4px 16px rgba(0,0,0,0.3),
-    0 1px 3px rgba(0,0,0,0.2),
+    0 10px 20px -4px rgba(0,0,0,0.3),
+    0 4px 8px -2px rgba(0,0,0,0.2),
     inset 0 1px 0 rgba(255,255,255,0.4),
-    inset 0 -1px 0 rgba(0,0,0,0.1),
-    0 0 0 3px rgba(255,255,255,0.6);
+    0 0 0 2.5px rgba(0, 255, 136, 0.7);
   animation: selectedPulse 2s ease-in-out infinite alternate;
 }
 
 @keyframes selectedPulse {
-  from {
-    box-shadow:
-      0 4px 16px rgba(0,0,0,0.3),
-      0 1px 3px rgba(0,0,0,0.2),
-      inset 0 1px 0 rgba(255,255,255,0.4),
-      inset 0 -1px 0 rgba(0,0,0,0.1),
-      0 0 0 3px rgba(255,255,255,0.4);
+  from { box-shadow:
+    0 10px 20px -4px rgba(0,0,0,0.3),
+    0 4px 8px -2px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    0 0 0 2.5px rgba(0, 255, 136, 0.5);
   }
-  to {
-    box-shadow:
-      0 4px 16px rgba(0,0,0,0.3),
-      0 1px 3px rgba(0,0,0,0.2),
-      inset 0 1px 0 rgba(255,255,255,0.4),
-      inset 0 -1px 0 rgba(0,0,0,0.1),
-      0 0 0 3px rgba(255,255,255,0.7);
+  to { box-shadow:
+    0 10px 20px -4px rgba(0,0,0,0.3),
+    0 4px 8px -2px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    0 0 0 2.5px rgba(0, 255, 136, 0.9);
   }
 }
 
@@ -377,39 +339,39 @@ body.controls-visible #menu-btn {
   justify-content: center;
 }
 
-/* Thumbnail Title */
+/* Thumbnail Title — centered pill label */
 .thumbnail-title {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
-}
-
-/* Now Playing Label */
-.now-playing-badge {
-  position: absolute;
-  bottom: 8px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 3;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 9999px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Now Playing Badge — green pill, top-left */
+.now-playing-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
   z-index: 4;
   padding: 3px 10px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: white;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.3);
+  color: #000;
+  background: linear-gradient(90deg, #00ff88, #00cc66);
+  border-radius: 9999px;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
   white-space: nowrap;
 }
 

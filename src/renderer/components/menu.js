@@ -78,7 +78,7 @@ class VideoMenu {
       if (video.id === this.selectedVideoId) {
         const badge = document.createElement('div');
         badge.className = 'now-playing-badge';
-        badge.textContent = '\u25B6 Now Playing';
+        badge.textContent = 'NOW';
         card.appendChild(badge);
       }
 
@@ -99,7 +99,7 @@ class VideoMenu {
     // Brief scale-up animation on the clicked card
     const card = this.grid.querySelector(`[data-video-id="${video.id}"]`);
     if (card) {
-      card.style.transform = 'perspective(800px) rotateX(2deg) scale(1.1)';
+      card.style.transform = 'scale(1.08)';
       setTimeout(() => {
         card.style.transform = '';
       }, 100);
