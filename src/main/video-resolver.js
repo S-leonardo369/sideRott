@@ -1,86 +1,148 @@
 /**
  * VideoResolver — Uses yt-dlp to resolve direct stream URLs from YouTube.
  *
- * Tries two approaches:
- *   1. Run yt-dlp.exe directly (pip-installed entry point)
- *   2. Fall back to `python -m yt_dlp` (always works if pip-installed)
- *
+ * Returns a direct CDN URL for <video> element playback.
  * URLs are cached for 2 hours (YouTube CDN URLs expire after ~6h).
+ *
+ * NOTE: We use exec() (shell) instead of execFile() because pip-installed
+ * yt-dlp.exe is a launcher stub that execFile() can't run inside Electron.
+ * We also inject Python paths into the child process environment because
+ * Electron may not inherit the same PATH as the user's interactive shell.
  */
 
-const { execFile } = require('child_process');
+const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// ── Locate yt-dlp.exe on disk (no execution, just file check) ──
-
-function findYtDlpExe() {
-  const candidates = [
-    path.join(process.env.APPDATA || '', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.APPDATA || '', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.APPDATA || '', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.APPDATA || '', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-    'C:\\yt-dlp\\yt-dlp.exe',
-    path.join(process.env.ProgramData || 'C:\\ProgramData', 'chocolatey', 'bin', 'yt-dlp.exe'),
-    path.join(process.env.USERPROFILE || '', 'scoop', 'shims', 'yt-dlp.exe'),
-  ];
-
-  for (const p of candidates) {
-    if (p && fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
 // Cache resolved URLs
 const urlCache = new Map();
-const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+
+// Cache the working command so we don't re-discover every call
+let _cachedCommand = null;
 
 /**
- * Run yt-dlp with the given args. Tries the .exe first, falls back to python -m.
+ * Build an environment object with Python paths guaranteed to be present.
+ * This is necessary because Electron's child processes may not inherit
+ * the user's full interactive shell PATH.
  */
-function runYtDlp(args) {
-  return new Promise((resolve, reject) => {
-    const exePath = findYtDlpExe();
+function buildEnv() {
+  const env = { ...process.env };
+  const appData = env.APPDATA || '';
+  const extraPaths = [];
 
-    // Attempt 1: direct .exe
-    if (exePath) {
-      execFile(exePath, args, {
-        timeout: 15000,
-        maxBuffer: 1024 * 64,
-        windowsHide: true
-      }, (err, stdout) => {
-        if (!err && stdout.trim()) {
-          resolve(stdout.trim());
+  // Add pip user-scripts dirs for common Python versions
+  for (const ver of ['Python314', 'Python313', 'Python312', 'Python311']) {
+    const scriptsDir = path.join(appData, 'Python', ver, 'Scripts');
+    if (fs.existsSync(scriptsDir)) extraPaths.push(scriptsDir);
+  }
+
+  // Add common system Python locations
+  for (const pyDir of ['C:\\Python314', 'C:\\Python313', 'C:\\Python312', 'C:\\Python311']) {
+    if (fs.existsSync(pyDir)) {
+      extraPaths.push(pyDir);
+      extraPaths.push(path.join(pyDir, 'Scripts'));
+    }
+  }
+
+  // Add local-app-data Python installs
+  const localAppData = env.LOCALAPPDATA || '';
+  if (localAppData) {
+    for (const ver of ['Python314', 'Python313', 'Python312', 'Python311']) {
+      const pyDir = path.join(localAppData, 'Programs', 'Python', ver);
+      if (fs.existsSync(pyDir)) {
+        extraPaths.push(pyDir);
+        extraPaths.push(path.join(pyDir, 'Scripts'));
+      }
+    }
+  }
+
+  // Prepend to PATH
+  if (extraPaths.length > 0) {
+    env.PATH = extraPaths.join(';') + ';' + (env.PATH || '');
+  }
+
+  // Ensure Python can find user-installed packages (pip --user)
+  const userSitePackages = path.join(appData, 'Python', 'Python314', 'site-packages');
+  if (fs.existsSync(userSitePackages)) {
+    env.PYTHONPATH = userSitePackages + (env.PYTHONPATH ? ';' + env.PYTHONPATH : '');
+  }
+
+  return env;
+}
+
+/**
+ * Discover which yt-dlp invocation method works on this machine.
+ * Tests with --version (fast), caches the result.
+ */
+function discoverYtDlp() {
+  if (_cachedCommand) return Promise.resolve(_cachedCommand);
+
+  const env = buildEnv();
+  const candidates = [
+    'yt-dlp',           // On PATH (after we enriched it)
+    'python -m yt_dlp', // Via Python module
+  ];
+
+  return new Promise((resolve) => {
+    let idx = 0;
+
+    function tryNext() {
+      if (idx >= candidates.length) {
+        console.error('[VideoResolver] Could not find a working yt-dlp. Tried:', candidates.join(', '));
+        resolve(null);
+        return;
+      }
+
+      const cmd = candidates[idx];
+      exec(`${cmd} --version`, { timeout: 10000, env, windowsHide: true }, (err, stdout) => {
+        if (!err && stdout && stdout.trim()) {
+          console.log(`[VideoResolver] Found working yt-dlp: "${cmd}" (v${stdout.trim()})`);
+          _cachedCommand = cmd;
+          resolve(cmd);
           return;
         }
-        console.warn(`[VideoResolver] Direct .exe failed (${err?.code || 'no output'}), trying python -m`);
-        // Fall through to attempt 2
-        runViaPython(args).then(resolve).catch(reject);
+        idx++;
+        tryNext();
       });
-      return;
     }
 
-    // Attempt 2: python -m yt_dlp
-    console.log('[VideoResolver] No .exe found, using python -m yt_dlp');
-    runViaPython(args).then(resolve).catch(reject);
+    tryNext();
   });
 }
 
-function runViaPython(args) {
+/**
+ * Escape a single argument for cmd.exe shell usage.
+ */
+function shellArg(arg) {
+  return `"${arg}"`;
+}
+
+/**
+ * Run a yt-dlp command with the given arguments.
+ */
+async function runYtDlp(args) {
+  const baseCmd = await discoverYtDlp();
+  if (!baseCmd) {
+    throw new Error(
+      'yt-dlp not found. Install it with: pip install yt-dlp'
+    );
+  }
+
+  const argsStr = args.map(shellArg).join(' ');
+  const fullCmd = `${baseCmd} ${argsStr}`;
+  const env = buildEnv();
+
   return new Promise((resolve, reject) => {
-    execFile('python', ['-m', 'yt_dlp', ...args], {
-      timeout: 15000,
-      maxBuffer: 1024 * 64,
-      windowsHide: true
-    }, (err, stdout) => {
-      if (err) {
-        reject(new Error(`python -m yt_dlp failed: ${err.message}`));
+    exec(fullCmd, { timeout: 30000, maxBuffer: 1024 * 64, windowsHide: true, env }, (err, stdout, stderr) => {
+      if (!err && stdout && stdout.trim()) {
+        resolve(stdout.trim());
         return;
       }
-      resolve(stdout.trim());
+      const errMsg = stderr
+        ? stderr.trim().substring(0, 200)
+        : (err ? err.message.substring(0, 200) : 'no output');
+      reject(new Error(`yt-dlp failed: ${errMsg}`));
     });
   });
 }
