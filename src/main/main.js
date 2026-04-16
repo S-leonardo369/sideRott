@@ -5,6 +5,10 @@ const windowManager = require('./window-manager');
 const { DEFAULT_CONFIG } = require('../shared/config');
 const { resolveStreamUrl } = require('./video-resolver');
 
+// ── Windows identity — must be set before app ready ──
+// Required for: Windows Store listing, system notifications, taskbar grouping
+app.setAppUserModelId('com.siderott.app');
+
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -15,11 +19,28 @@ if (!gotLock) {
 let tray = null;
 let settingsWindow = null;
 let config = {};
-const configPath = path.join(app.getPath('userData'), 'brainrot.config.json');
+const configPath = path.join(app.getPath('userData'), 'siderott.config.json');
+
+// ── Crash / uncaught exception handlers ──
+// Prevents the app from silently dying in production
+
+process.on('uncaughtException', (err) => {
+  console.error('[sideRott] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[sideRott] Unhandled rejection:', reason);
+});
 
 // ── Config Management ──
 
 function loadConfig() {
+  // Migrate from old config filename if present
+  const oldConfigPath = path.join(app.getPath('userData'), 'brainrot.config.json');
+  if (!fs.existsSync(configPath) && fs.existsSync(oldConfigPath)) {
+    try { fs.renameSync(oldConfigPath, configPath); } catch (_) {}
+  }
+
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
@@ -43,31 +64,44 @@ function saveConfig(newConfig) {
 // ── Tray Icon ──
 
 function createTrayIcon() {
-  const iconPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'icons', 'tray-icon.png')
-    : path.join(__dirname, '..', '..', 'assets', 'icons', 'tray-icon.png');
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath, 'icons')
+    : path.join(__dirname, '..', '..', 'assets', 'icons');
 
-  const icon = nativeImage.createFromPath(iconPath);
-  return icon.resize({ width: 16, height: 16 });
+  // Provide both 1x (32px) and 2x (64px) so Windows picks the right size
+  // for 100%/125%/150%/200% DPI scaling. Do NOT hard-resize — let Windows decide.
+  const icon = nativeImage.createEmpty();
+  const img1x = nativeImage.createFromPath(path.join(base, 'tray-icon.png'));
+  const img2x = nativeImage.createFromPath(path.join(base, 'tray-icon@2x.png'));
+  if (!img1x.isEmpty()) icon.addRepresentation({ scaleFactor: 1.0, ...img1x.getSize(), buffer: img1x.toPNG() });
+  if (!img2x.isEmpty()) icon.addRepresentation({ scaleFactor: 2.0, ...img2x.getSize(), buffer: img2x.toPNG() });
+  return icon.isEmpty() ? img1x : icon;
 }
 
 function createTray() {
   const icon = createTrayIcon();
   tray = new Tray(icon);
   tray.setToolTip('sideRott');
-
   updateTrayMenu();
 }
 
 function updateTrayMenu() {
+  const hotkey = (config.hotkey || DEFAULT_CONFIG.hotkey)
+    .replace('CommandOrControl', 'Ctrl');
+
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: `Show / Hide  (${hotkey})`,
+      click: () => windowManager.toggleOverlay(config)
+    },
+    { type: 'separator' },
     {
       label: 'Settings',
       click: () => openSettings()
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: 'Quit sideRott',
       click: () => {
         windowManager.destroyOverlay();
         app.quit();
@@ -105,7 +139,8 @@ function registerHotkey() {
       if (registered && tray) {
         tray.displayBalloon({
           title: 'sideRott',
-          content: `Hotkey conflict — using ${fallback.replace('CommandOrControl', 'Ctrl')} instead.`
+          content: `Hotkey conflict — using ${fallback.replace('CommandOrControl', 'Ctrl')} instead.`,
+          noSound: true
         });
       }
     } catch (e) {
@@ -113,7 +148,31 @@ function registerHotkey() {
     }
   }
 
+  // Keep tray menu label in sync with whatever hotkey is active
+  updateTrayMenu();
+
   return registered;
+}
+
+// ── First-Run Welcome ──
+
+function showFirstRunNotification() {
+  if (config.hasShownWelcome) return;
+
+  saveConfig({ hasShownWelcome: true });
+
+  // Small delay so the tray icon is settled before the balloon appears
+  setTimeout(() => {
+    if (tray && !tray.isDestroyed()) {
+      const hotkey = (config.hotkey || DEFAULT_CONFIG.hotkey)
+        .replace('CommandOrControl', 'Ctrl');
+      tray.displayBalloon({
+        title: 'sideRott is running',
+        content: `Press ${hotkey} to open the overlay`,
+        noSound: true
+      });
+    }
+  }, 1500);
 }
 
 // ── Settings Window ──
@@ -207,8 +266,11 @@ function setupIPC() {
   });
 
   ipcMain.handle('settings:record-hotkey', () => {
-    // This is handled in the settings renderer
     return true;
+  });
+
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion();
   });
 }
 
@@ -240,6 +302,9 @@ app.on('ready', () => {
 
   // Pre-create overlay window (hidden) for instant show
   windowManager.createOverlayWindow(config);
+
+  // Welcome notification on first run
+  showFirstRunNotification();
 });
 
 app.on('second-instance', () => {

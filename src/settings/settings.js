@@ -1,5 +1,10 @@
 (async function() {
   const config = await window.brainrot.getConfig();
+  const version = await window.brainrot.getVersion();
+
+  // Show live version in about section
+  const aboutEl = document.querySelector('.about-text');
+  if (aboutEl && version) aboutEl.textContent = `sideRott v${version}`;
 
   // ── Elements ──
   const hotkeyBtn = document.getElementById('hotkey-btn');

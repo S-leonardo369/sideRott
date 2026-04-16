@@ -1,7 +1,7 @@
 {
-  "name": "brainrot",
+  "name": "siderott",
   "version": "1.0.0",
-  "description": "Focus companion — controlled background stimulation for deep work",
+  "description": "Side-screen video overlay for focus and background stimulation",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
@@ -10,7 +10,7 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win"
   },
-  "author": "BrainRot",
+  "author": "sideRott",
   "license": "MIT",
   "devDependencies": {
     "electron": "^33.0.0",
@@ -49,9 +49,15 @@
       "icon": "assets/icons/app-icon.ico"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "sideRott",
+      "installerIcon": "assets/icons/app-icon.ico",
+      "uninstallerIcon": "assets/icons/app-icon.ico",
+      "uninstallDisplayName": "sideRott"
     }
   }
 }
