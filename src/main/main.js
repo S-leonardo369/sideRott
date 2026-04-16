@@ -40,25 +40,21 @@ function saveConfig(newConfig) {
   }
 }
 
-// ── Tray Icon (generated programmatically) ──
+// ── Tray Icon ──
 
 function createTrayIcon() {
-  const size = 16;
-  const canvas = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <rect width="${size}" height="${size}" rx="3" fill="#1a1a2e"/>
-    <text x="8" y="12" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#e94560" text-anchor="middle">B</text>
-  </svg>`;
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icons', 'tray-icon.png')
+    : path.join(__dirname, '..', '..', 'assets', 'icons', 'tray-icon.png');
 
-  // Create a simple 16x16 icon using nativeImage from a data URL
-  // Since SVG data URLs work in nativeImage, we use that
-  const dataUrl = `data:image/svg+xml;base64,${Buffer.from(canvas).toString('base64')}`;
-  return nativeImage.createFromDataURL(dataUrl);
+  const icon = nativeImage.createFromPath(iconPath);
+  return icon.resize({ width: 16, height: 16 });
 }
 
 function createTray() {
   const icon = createTrayIcon();
   tray = new Tray(icon);
-  tray.setToolTip('BrainRot — Focus Companion');
+  tray.setToolTip('sideRott');
 
   updateTrayMenu();
 }
@@ -108,7 +104,7 @@ function registerHotkey() {
       });
       if (registered && tray) {
         tray.displayBalloon({
-          title: 'BrainRot',
+          title: 'sideRott',
           content: `Hotkey conflict — using ${fallback.replace('CommandOrControl', 'Ctrl')} instead.`
         });
       }
@@ -135,7 +131,7 @@ function openSettings() {
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: 'BrainRot Settings',
+    title: 'sideRott',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),
