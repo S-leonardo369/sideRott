@@ -1,5 +1,5 @@
 /**
- * App — Main orchestrator for the BrainRot overlay renderer.
+ * App — Main orchestrator for the sideRott overlay renderer.
  * Wires together VideoPlayer, Controls, and VideoMenu.
  */
 

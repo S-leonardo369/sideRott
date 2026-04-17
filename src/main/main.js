@@ -1,4 +1,4 @@
-const { app, Tray, Menu, globalShortcut, screen, ipcMain, nativeImage, shell, BrowserWindow } = require('electron');
+const { app, Tray, Menu, globalShortcut, screen, ipcMain, nativeImage, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const windowManager = require('./window-manager');
@@ -263,10 +263,6 @@ function setupIPC() {
       console.error('[IPC] Stream resolution failed:', e.message);
       return { error: e.message };
     }
-  });
-
-  ipcMain.handle('settings:record-hotkey', () => {
-    return true;
   });
 
   ipcMain.handle('app:get-version', () => {

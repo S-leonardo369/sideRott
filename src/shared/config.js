@@ -113,7 +113,8 @@ const DEFAULT_CONFIG = {
   overlayPosition: 'right',
   overlayWidth: 25,
   selectedVideoId: 'minecraft-parkour-01',
-  reducedMotion: false
+  reducedMotion: false,
+  hasShownWelcome: false
 };
 
 if (typeof module !== 'undefined' && module.exports) {

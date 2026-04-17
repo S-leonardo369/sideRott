@@ -218,6 +218,15 @@ class VideoPlayer {
    * Crossfade from the local clip to the live stream.
    */
   _handoffToStream() {
+    // If the overlay was hidden while the stream was loading, don't start
+    // playing — just mark it ready so resume() will pick it up.
+    if (!this.isPlaying) {
+      this.streamActive = true;
+      this.streamLoading = false;
+      console.log('[VideoPlayer] Stream ready (overlay hidden, will play on resume)');
+      return;
+    }
+
     // Listen for stream ending — CDN URLs often can't use native loop,
     // so we manually restart playback from the beginning.
     this.streamEl.addEventListener('ended', () => {
@@ -292,9 +301,12 @@ class VideoPlayer {
     await new Promise(r => setTimeout(r, 200));
 
     this._resetStream();
-    await this.play(videoConfig);
-
-    this.container.style.opacity = '1';
+    try {
+      await this.play(videoConfig);
+    } finally {
+      // Always restore opacity — prevents permanent black screen on error
+      this.container.style.opacity = '1';
+    }
   }
 
   // ── Gradient Fallback ──

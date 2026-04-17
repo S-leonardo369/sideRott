@@ -4,6 +4,7 @@ const path = require('path');
 let overlayWindow = null;
 let isOverlayVisible = false;
 let slideAnimationTimeout = null;
+let slideAnimationId = 0; // Incremented each time to cancel in-flight animations
 
 function getOverlayBounds(config) {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -81,6 +82,7 @@ function showOverlay(config) {
   overlayWindow.webContents.send('overlay:pre-show');
 
   if (slideAnimationTimeout) clearTimeout(slideAnimationTimeout);
+  const myId = ++slideAnimationId; // Any older animation will see myId !== slideAnimationId and stop
 
   const animationDuration = 250;
   const steps = 16;
@@ -92,6 +94,7 @@ function showOverlay(config) {
   }
 
   function animateStep() {
+    if (myId !== slideAnimationId) return; // Cancelled by a newer animation
     currentStep++;
     const progress = easeOutExpo(currentStep / steps);
     const currentX = Math.round(offscreenX + (bounds.x - offscreenX) * progress);
@@ -125,6 +128,7 @@ function hideOverlay(config) {
   overlayWindow.webContents.send('overlay:pre-hide');
 
   if (slideAnimationTimeout) clearTimeout(slideAnimationTimeout);
+  const myId = ++slideAnimationId;
 
   const animationDuration = 200;
   const steps = 12;
@@ -136,6 +140,7 @@ function hideOverlay(config) {
   }
 
   function animateStep() {
+    if (myId !== slideAnimationId) return; // Cancelled by a newer animation
     currentStep++;
     const progress = easeInQuad(currentStep / steps);
     const currentX = Math.round(bounds.x + (offscreenX - bounds.x) * progress);
