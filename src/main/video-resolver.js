@@ -6,13 +6,22 @@
  * (YouTube CDN URLs typically expire after ~6 hours).
  */
 
+const { app } = require('electron');
 const { execFile, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// ── Find yt-dlp on this machine ──
+// ── Bundled binary (works on any machine — no Python needed) ──
 
-const CANDIDATE_PATHS = [
+function getBundledYtDlpPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'bin', 'yt-dlp.exe')
+    : path.join(__dirname, '..', '..', 'assets', 'bin', 'yt-dlp.exe');
+}
+
+// ── System-installed fallback candidates ──
+
+const SYSTEM_CANDIDATES = [
   // Pip installs (user)
   path.join(process.env.APPDATA || '', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
   path.join(process.env.APPDATA || '', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
@@ -37,10 +46,13 @@ let _resolvedPath = null;
 function findYtDlp() {
   if (_resolvedPath) return _resolvedPath;
 
-  for (const candidate of CANDIDATE_PATHS) {
+  // Always check the bundled binary first — works on any machine, no Python needed
+  const bundled = getBundledYtDlpPath();
+  const allCandidates = [bundled, ...SYSTEM_CANDIDATES];
+
+  for (const candidate of allCandidates) {
     try {
       if (fs.existsSync(candidate)) {
-        // Verify it's actually executable
         execFileSync(candidate, ['--version'], { timeout: 5000, stdio: 'pipe' });
         _resolvedPath = candidate;
         console.log(`[VideoResolver] Found yt-dlp at: ${candidate}`);
@@ -51,7 +63,7 @@ function findYtDlp() {
     }
   }
 
-  console.error('[VideoResolver] yt-dlp not found! Searched:', CANDIDATE_PATHS.filter(p => p).join(', '));
+  console.error('[VideoResolver] yt-dlp not found! Bundled path checked:', bundled);
   return null;
 }
 
@@ -74,7 +86,7 @@ function resolveStreamUrl(sourceUrl) {
   const ytdlpPath = findYtDlp();
   if (!ytdlpPath) {
     return Promise.reject(new Error(
-      'yt-dlp not found. Install it: pip install yt-dlp  (or download from https://github.com/yt-dlp/yt-dlp/releases)'
+      'yt-dlp not found. The bundled binary may be missing — try reinstalling the app.'
     ));
   }
 

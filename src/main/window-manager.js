@@ -176,6 +176,13 @@ function repositionOverlay(config) {
   const bounds = getOverlayBounds(config);
   if (isOverlayVisible) {
     overlayWindow.setBounds(bounds);
+  } else {
+    // Park off-screen at the new display geometry so the next show animation
+    // starts from the correct position (handles display add/remove/DPI changes)
+    const offscreenX = config.overlayPosition === 'left'
+      ? bounds.x - bounds.width
+      : bounds.x + bounds.width;
+    overlayWindow.setBounds({ x: offscreenX, y: bounds.y, width: bounds.width, height: bounds.height });
   }
 }
 

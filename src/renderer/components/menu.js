@@ -35,7 +35,7 @@ class VideoMenu {
 
       // Try to load thumbnail image, fall back to gradient
       const thumbnailPath = this.paths
-        ? `file://${this.paths.thumbnails.replace(/\\/g, '/')}/${video.thumbnail}`
+        ? `file:///${this.paths.thumbnails.replace(/\\/g, '/')}/${video.thumbnail}`
         : null;
 
       const img = document.createElement('img');
