@@ -72,16 +72,32 @@ function buildEnv() {
 }
 
 /**
+ * Returns the path to the yt-dlp binary bundled inside the app package.
+ * This is the primary method — it works on any machine with no external deps.
+ */
+function getBundledYtDlpPath() {
+  // app is available via require('electron').app in main process
+  const { app } = require('electron');
+  const binDir = app.isPackaged
+    ? path.join(process.resourcesPath, 'bin')
+    : path.join(__dirname, '..', '..', 'assets', 'bin');
+  return path.join(binDir, 'yt-dlp.exe');
+}
+
+/**
  * Discover which yt-dlp invocation method works on this machine.
+ * Checks the bundled binary first, then falls back to system installs.
  * Tests with --version (fast), caches the result.
  */
 function discoverYtDlp() {
   if (_cachedCommand) return Promise.resolve(_cachedCommand);
 
   const env = buildEnv();
+  const bundled = getBundledYtDlpPath();
   const candidates = [
-    'yt-dlp',           // On PATH (after we enriched it)
-    'python -m yt_dlp', // Via Python module
+    `"${bundled}"`,     // Bundled binary — works on any machine, no Python needed
+    'yt-dlp',           // System install on PATH (fallback for dev)
+    'python -m yt_dlp', // pip install fallback
   ];
 
   return new Promise((resolve) => {

@@ -40,6 +40,10 @@
       {
         "from": "assets/icons",
         "to": "icons"
+      },
+      {
+        "from": "assets/bin",
+        "to": "bin"
       }
     ],
     "win": {

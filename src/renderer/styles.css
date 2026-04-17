@@ -342,18 +342,23 @@ body.controls-visible #menu-btn {
 /* Thumbnail Title — centered pill label */
 .thumbnail-title {
   position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 8px;
+  left: 6px;
+  right: 6px;
   z-index: 3;
-  padding: 3px 12px;
-  font-size: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
   font-weight: 600;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: 9999px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 8px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
   pointer-events: none;
 }
 
