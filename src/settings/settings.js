@@ -25,7 +25,7 @@
 
   hotkeyBtn.textContent = formatHotkey(config.hotkey || 'CommandOrControl+Shift+B');
   startupToggle.checked = config.launchOnStartup !== false;
-  qualitySelect.value = config.videoQuality || '720p';
+  qualitySelect.value = config.videoQuality || '1080p';
   positionSelect.value = config.overlayPosition || 'right';
   widthSlider.value = config.overlayWidth || 25;
   widthLabel.textContent = `${widthSlider.value}% of screen`;

@@ -44,7 +44,16 @@ function loadConfig() {
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
-      return { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+      const saved = JSON.parse(data);
+
+      // Migration: upgrade old 720p default to 1080p
+      if (saved.videoQuality === '720p' && !saved._qualityUpgraded) {
+        saved.videoQuality = '1080p';
+        saved._qualityUpgraded = true;
+        fs.writeFileSync(configPath, JSON.stringify({ ...DEFAULT_CONFIG, ...saved }, null, 2));
+      }
+
+      return { ...DEFAULT_CONFIG, ...saved };
     }
   } catch (e) {
     console.error('Failed to load config:', e);
@@ -192,6 +201,9 @@ function openSettings() {
     fullscreenable: false,
     title: 'sideRott',
     autoHideMenuBar: true,
+    icon: app.isPackaged
+      ? path.join(process.resourcesPath, 'icons', 'app-icon.png')
+      : path.join(__dirname, '..', '..', 'assets', 'icons', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),
       contextIsolation: true,
