@@ -1,9 +1,13 @@
-const { app, Tray, Menu, globalShortcut, screen, ipcMain, nativeImage, shell, BrowserWindow } = require('electron');
+const { app, Tray, Menu, globalShortcut, screen, ipcMain, nativeImage, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const windowManager = require('./window-manager');
 const { DEFAULT_CONFIG } = require('../shared/config');
 const { resolveStreamUrl } = require('./video-resolver');
+
+// ── Windows identity — must be set before app ready ──
+// Required for: Windows Store listing, system notifications, taskbar grouping
+app.setAppUserModelId('com.siderott.app');
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock();
@@ -15,15 +19,41 @@ if (!gotLock) {
 let tray = null;
 let settingsWindow = null;
 let config = {};
-const configPath = path.join(app.getPath('userData'), 'brainrot.config.json');
+const configPath = path.join(app.getPath('userData'), 'siderott.config.json');
+
+// ── Crash / uncaught exception handlers ──
+// Prevents the app from silently dying in production
+
+process.on('uncaughtException', (err) => {
+  console.error('[sideRott] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[sideRott] Unhandled rejection:', reason);
+});
 
 // ── Config Management ──
 
 function loadConfig() {
+  // Migrate from old config filename if present
+  const oldConfigPath = path.join(app.getPath('userData'), 'brainrot.config.json');
+  if (!fs.existsSync(configPath) && fs.existsSync(oldConfigPath)) {
+    try { fs.renameSync(oldConfigPath, configPath); } catch (_) {}
+  }
+
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
-      return { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+      const saved = JSON.parse(data);
+
+      // Migration: upgrade old 720p default to 1080p
+      if (saved.videoQuality === '720p' && !saved._qualityUpgraded) {
+        saved.videoQuality = '1080p';
+        saved._qualityUpgraded = true;
+        fs.writeFileSync(configPath, JSON.stringify({ ...DEFAULT_CONFIG, ...saved }, null, 2));
+      }
+
+      return { ...DEFAULT_CONFIG, ...saved };
     }
   } catch (e) {
     console.error('Failed to load config:', e);
@@ -40,38 +70,47 @@ function saveConfig(newConfig) {
   }
 }
 
-// ── Tray Icon (generated programmatically) ──
+// ── Tray Icon ──
 
 function createTrayIcon() {
-  const size = 16;
-  const canvas = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <rect width="${size}" height="${size}" rx="3" fill="#1a1a2e"/>
-    <text x="8" y="12" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#e94560" text-anchor="middle">B</text>
-  </svg>`;
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath, 'icons')
+    : path.join(__dirname, '..', '..', 'assets', 'icons');
 
-  // Create a simple 16x16 icon using nativeImage from a data URL
-  // Since SVG data URLs work in nativeImage, we use that
-  const dataUrl = `data:image/svg+xml;base64,${Buffer.from(canvas).toString('base64')}`;
-  return nativeImage.createFromDataURL(dataUrl);
+  // Provide both 1x (32px) and 2x (64px) so Windows picks the right size
+  // for 100%/125%/150%/200% DPI scaling. Do NOT hard-resize — let Windows decide.
+  const icon = nativeImage.createEmpty();
+  const img1x = nativeImage.createFromPath(path.join(base, 'tray-icon.png'));
+  const img2x = nativeImage.createFromPath(path.join(base, 'tray-icon@2x.png'));
+  if (!img1x.isEmpty()) icon.addRepresentation({ scaleFactor: 1.0, ...img1x.getSize(), buffer: img1x.toPNG() });
+  if (!img2x.isEmpty()) icon.addRepresentation({ scaleFactor: 2.0, ...img2x.getSize(), buffer: img2x.toPNG() });
+  return icon.isEmpty() ? img1x : icon;
 }
 
 function createTray() {
   const icon = createTrayIcon();
   tray = new Tray(icon);
-  tray.setToolTip('BrainRot — Focus Companion');
-
+  tray.setToolTip('sideRott');
   updateTrayMenu();
 }
 
 function updateTrayMenu() {
+  const hotkey = (config.hotkey || DEFAULT_CONFIG.hotkey)
+    .replace('CommandOrControl', 'Ctrl');
+
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: `Show / Hide  (${hotkey})`,
+      click: () => windowManager.toggleOverlay(config)
+    },
+    { type: 'separator' },
     {
       label: 'Settings',
       click: () => openSettings()
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: 'Quit sideRott',
       click: () => {
         windowManager.destroyOverlay();
         app.quit();
@@ -108,8 +147,9 @@ function registerHotkey() {
       });
       if (registered && tray) {
         tray.displayBalloon({
-          title: 'BrainRot',
-          content: `Hotkey conflict — using ${fallback.replace('CommandOrControl', 'Ctrl')} instead.`
+          title: 'sideRott',
+          content: `Hotkey conflict — using ${fallback.replace('CommandOrControl', 'Ctrl')} instead.`,
+          noSound: true
         });
       }
     } catch (e) {
@@ -117,7 +157,31 @@ function registerHotkey() {
     }
   }
 
+  // Keep tray menu label in sync with whatever hotkey is active
+  updateTrayMenu();
+
   return registered;
+}
+
+// ── First-Run Welcome ──
+
+function showFirstRunNotification() {
+  if (config.hasShownWelcome) return;
+
+  saveConfig({ hasShownWelcome: true });
+
+  // Small delay so the tray icon is settled before the balloon appears
+  setTimeout(() => {
+    if (tray && !tray.isDestroyed()) {
+      const hotkey = (config.hotkey || DEFAULT_CONFIG.hotkey)
+        .replace('CommandOrControl', 'Ctrl');
+      tray.displayBalloon({
+        title: 'sideRott is running',
+        content: `Press ${hotkey} to open the overlay`,
+        noSound: true
+      });
+    }
+  }, 1500);
 }
 
 // ── Settings Window ──
@@ -135,8 +199,11 @@ function openSettings() {
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    title: 'BrainRot Settings',
+    title: 'sideRott',
     autoHideMenuBar: true,
+    icon: app.isPackaged
+      ? path.join(process.resourcesPath, 'icons', 'app-icon.png')
+      : path.join(__dirname, '..', '..', 'assets', 'icons', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),
       contextIsolation: true,
@@ -210,9 +277,8 @@ function setupIPC() {
     }
   });
 
-  ipcMain.handle('settings:record-hotkey', () => {
-    // This is handled in the settings renderer
-    return true;
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion();
   });
 }
 
@@ -244,6 +310,9 @@ app.on('ready', () => {
 
   // Pre-create overlay window (hidden) for instant show
   windowManager.createOverlayWindow(config);
+
+  // Welcome notification on first run
+  showFirstRunNotification();
 });
 
 app.on('second-instance', () => {

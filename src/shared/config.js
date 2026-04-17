@@ -109,11 +109,12 @@ const DEFAULT_CONFIG = {
   hotkey: 'CommandOrControl+Shift+B',
   fallbackHotkey: 'CommandOrControl+Alt+B',
   launchOnStartup: true,
-  videoQuality: '720p',
+  videoQuality: '1080p',
   overlayPosition: 'right',
   overlayWidth: 25,
   selectedVideoId: 'minecraft-parkour-01',
-  reducedMotion: false
+  reducedMotion: false,
+  hasShownWelcome: false
 };
 
 if (typeof module !== 'undefined' && module.exports) {

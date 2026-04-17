@@ -1,5 +1,10 @@
 (async function() {
   const config = await window.brainrot.getConfig();
+  const version = await window.brainrot.getVersion();
+
+  // Show live version in about section
+  const aboutEl = document.querySelector('.about-text');
+  if (aboutEl && version) aboutEl.textContent = `sideRott v${version}`;
 
   // ── Elements ──
   const hotkeyBtn = document.getElementById('hotkey-btn');
@@ -20,7 +25,7 @@
 
   hotkeyBtn.textContent = formatHotkey(config.hotkey || 'CommandOrControl+Shift+B');
   startupToggle.checked = config.launchOnStartup !== false;
-  qualitySelect.value = config.videoQuality || '720p';
+  qualitySelect.value = config.videoQuality || '1080p';
   positionSelect.value = config.overlayPosition || 'right';
   widthSlider.value = config.overlayWidth || 25;
   widthLabel.textContent = `${widthSlider.value}% of screen`;
